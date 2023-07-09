@@ -6,11 +6,11 @@ import h5py
 import pytest
 
 from rail.core.stage import RailStage
-from rail.core.utils import RAILDIR
+from rail.core.utils import find_rail_file
 from src.rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
 from src.rail.creation.engines.dsps_sed_modeler import DSPSPopulationSedModeler, DSPSSingleSedModeler
 
-default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data', 'dsps_default_data')
+default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
 
 
 def create_testdata(files_folder):
@@ -88,7 +88,6 @@ def test_DSPSSingleSedModeler_model_creation():
     """
 
     trainFile = create_testdata(default_files_folder)
-
     DS = RailStage.data_store
     DS.__class__.allow_overwrite = True
 

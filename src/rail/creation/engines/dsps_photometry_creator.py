@@ -1,5 +1,5 @@
 import os
-from rail.core.utils import RAILDIR
+from rail.core.utils import find_rail_file
 from rail.creation.engine import Creator
 from rail.core.stage import RailStage
 from rail.core.data import Hdf5Handle
@@ -25,7 +25,7 @@ class DSPSPhotometryCreator(Creator):
     """
 
     name = "DSPSPhotometryCreator"
-    default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data', 'dsps_default_data')
+    default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
     config_options = RailStage.config_options.copy()
     config_options.update(redshift_key=Param(str, 'redshifts', msg='Redshift keyword name of the hdf5 dataset '
                                                                    'containing rest-frame SEDs'),
@@ -61,8 +61,8 @@ class DSPSPhotometryCreator(Creator):
         RailStage.__init__(self, args, comm=comm)
 
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data',
-                                                'dsps_default_data')
+            default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
+                                                'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
 

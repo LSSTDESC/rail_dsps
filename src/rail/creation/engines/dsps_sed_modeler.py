@@ -1,7 +1,7 @@
 import os
 from rail.creation.engine import Modeler
 from rail.core.stage import RailStage
-from rail.core.utils import RAILDIR
+from rail.core.utils import find_rail_file
 from rail.core.data import Hdf5Handle
 from ceci.config import StageParameter as Param
 import numpy as np
@@ -30,7 +30,7 @@ class DSPSSingleSedModeler(Modeler):
     """
 
     name = "DSPSSingleSedModeler"
-    default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data', 'dsps_default_data')
+    default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
     config_options = RailStage.config_options.copy()
     config_options.update(ssp_templates_file=Param(str, os.path.join(default_files_folder,
                                                                      'ssp_data_fsps_v3.2_lgmet_age.h5'),
@@ -75,8 +75,8 @@ class DSPSSingleSedModeler(Modeler):
         RailStage.__init__(self, args, comm=comm)
 
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data',
-                                                'dsps_default_data')
+            default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
+                                                'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
 
@@ -214,7 +214,7 @@ class DSPSPopulationSedModeler(Modeler):
     """
 
     name = "DSPSPopulationSedModeler"
-    default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data', 'dsps_default_data')
+    default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
     config_options = RailStage.config_options.copy()
     config_options.update(ssp_templates_file=Param(str, os.path.join(default_files_folder,
                                                                      'ssp_data_fsps_v3.2_lgmet_age.h5'),
@@ -261,8 +261,8 @@ class DSPSPopulationSedModeler(Modeler):
         RailStage.__init__(self, args, comm=comm)
 
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = os.path.join(RAILDIR, 'rail', 'examples_data', 'creation_data', 'data',
-                                                'dsps_default_data')
+            default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
+                                                'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
 
