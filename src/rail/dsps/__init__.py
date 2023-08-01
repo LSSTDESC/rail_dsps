@@ -3,7 +3,7 @@ try:
     os.environ['SPS_HOME']
 except KeyError:
     os.makedirs(os.path.join(os.getcwd(), 'data'))
-    with open('emlines_info.dat','w') as f:
+    with open(os.path.join(os.getcwd(), 'data/emlines_info.dat'),'w') as f:
         f.write('test')
     os.environ['SPS_HOME'] = os.path.join(os.getcwd(), 'data')
 from ._version import __version__
