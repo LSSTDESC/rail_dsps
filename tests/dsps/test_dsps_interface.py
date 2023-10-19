@@ -1,14 +1,24 @@
+#! /usr/bin/env python
+
+# Copyright (C) 2023 Luca Tortorelli, LSST DESC PZ WG
+# Author: Luca Tortorelli
+
+# System imports
+from __future__ import (print_function, division, absolute_import,
+                        unicode_literals)
+
+# External modules
 import os
 import subprocess
-
 import numpy as np
 import h5py
 import pytest
 
+# RAIL modules
 from rail.core.stage import RailStage
 from rail.core.utils import find_rail_file
-from src.rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
-from src.rail.creation.engines.dsps_sed_modeler import DSPSPopulationSedModeler, DSPSSingleSedModeler
+from rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
+from rail.creation.engines.dsps_sed_modeler import DSPSPopulationSedModeler, DSPSSingleSedModeler
 
 default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
 

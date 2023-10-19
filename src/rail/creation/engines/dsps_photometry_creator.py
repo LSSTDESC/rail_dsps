@@ -1,10 +1,16 @@
+#! /usr/bin/env python
+
+# Copyright (C) 2023 Luca Tortorelli, LSST DESC PZ WG
+# Author: Luca Tortorelli
+
+# System imports
+from __future__ import (print_function, division, absolute_import,
+                        unicode_literals)
+
+# External modules
 import os
-from rail.core.utils import find_rail_file
-from rail.creation.engine import Creator
-from rail.core.stage import RailStage
-from rail.core.data import Hdf5Handle
-from ceci.config import StageParameter as Param
 import numpy as np
+from ceci.config import StageParameter as Param
 from jax import vmap
 from jax import jit as jjit
 from dsps import calc_rest_mag
@@ -12,6 +18,12 @@ from dsps import calc_obs_mag
 from dsps import load_ssp_templates
 from dsps import load_transmission_curve
 from dsps.cosmology import DEFAULT_COSMOLOGY
+
+# RAIL modules
+from rail.core.utils import find_rail_file
+from rail.creation.engine import Creator
+from rail.core.stage import RailStage
+from rail.core.data import Hdf5Handle
 
 
 class DSPSPhotometryCreator(Creator):
@@ -76,10 +88,12 @@ class DSPSPhotometryCreator(Creator):
                                                   'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
+            self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
 
         if not os.path.isdir(self.config.filter_folder):
             raise OSError("File {self.config.filter_folder} not found")
 
+        self.model = None
         self.wavebands = self.config.wavebands.split(',')
         self.filter_wavelengths = np.array([load_transmission_curve(fn=os.path.join(self.config.filter_folder,
                                                                                     '{}_{}_transmission.h5'

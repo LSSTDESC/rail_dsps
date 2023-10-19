@@ -3,7 +3,7 @@ name = "pz_rail_dsps"
 license = {file = "LICENSE"}
 readme = "README.md"
 authors = [
-    { name = "LSST Dark Energy Science Collaboration (DESC)", email = "later@later.com" }
+    { name = "Luca Tortorelli, LSST DESC PZ WG", email = "Luca.Tortorelli@physik.lmu.de" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

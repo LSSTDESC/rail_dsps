@@ -1,16 +1,28 @@
+#! /usr/bin/env python
+
+# Copyright (C) 2023 Luca Tortorelli, LSST DESC PZ WG
+# Author: Luca Tortorelli
+
+# System imports
+from __future__ import (print_function, division, absolute_import,
+                        unicode_literals)
+
+# External modules
 import os
-from rail.creation.engine import Modeler
-from rail.core.stage import RailStage
-from rail.core.utils import find_rail_file
-from rail.core.data import Hdf5Handle
-from ceci.config import StageParameter as Param
 import numpy as np
+from ceci.config import StageParameter as Param
 from jax import vmap
 from jax import jit as jjit
 from dsps.cosmology import age_at_z, DEFAULT_COSMOLOGY
 from dsps import load_ssp_templates
 from dsps import calc_rest_sed_sfh_table_lognormal_mdf
 from dsps import calc_rest_sed_sfh_table_met_table
+
+# RAIL modules
+from rail.creation.engine import Modeler
+from rail.core.stage import RailStage
+from rail.core.utils import find_rail_file
+from rail.core.data import Hdf5Handle
 
 
 class DSPSSingleSedModeler(Modeler):
@@ -83,6 +95,7 @@ class DSPSSingleSedModeler(Modeler):
                                                   'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
+            self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
 
     def _get_rest_frame_seds(self, ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
                              stellar_metallicities, stellar_metallicities_scatter):
@@ -316,6 +329,7 @@ class DSPSPopulationSedModeler(Modeler):
                                                   'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
+            self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
 
     def _get_rest_frame_seds(self, ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
                              stellar_metallicities, stellar_metallicities_scatter):
