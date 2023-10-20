@@ -412,7 +412,8 @@ class DSPSPopulationSedModeler(Modeler):
 
         restframe_seds_galpop = self._calc_sed_vmap(*args_pop)
 
-        return restframe_seds_galpop.rest_sed[self.wavelength_range_mask]
+        return restframe_seds_galpop.rest_sed[:, self.wavelength_range_mask]\
+            .reshape((len(restframe_seds_galpop.rest_sed), len(self.restframe_wavelength_range)))
 
     def fit_model(self, input_data=os.path.join(default_files_folder, 'input_galaxy_properties_dsps.hdf5'),
                   Om0=DEFAULT_COSMOLOGY.Om0, w0=DEFAULT_COSMOLOGY.w0, wa=DEFAULT_COSMOLOGY.wa,
