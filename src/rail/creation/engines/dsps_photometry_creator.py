@@ -58,12 +58,14 @@ class DSPSPhotometryCreator(Creator):
                           instrument_name=Param(str, 'lsst', msg='Instrument name as prefix to filter transmission'
                                                                  ' files'),
                           wavebands=Param(str, 'u,g,r,i,z,y', msg='Comma-separated list of wavebands'),
+                          min_wavelength=Param(float, 250, msg='Minimum input rest-frame wavelength SEDs'),
+                          max_wavelength=Param(float, 12000, msg='Maximum input rest-frame wavelength SEDs'),
                           ssp_templates_file=Param(str, os.path.join(default_files_folder,
                                                                      'ssp_data_fsps_v3.2_lgmet_age.h5'),
                                                    msg='hdf5 file storing the SSP libraries used to create SEDs'),
-                          default_cosmology = Param(bool, True, msg='True to use default DSPS cosmology. If False,'
-                                                                    'Om0, w0, wa, h need to be supplied in the '
-                                                                    'sample function'))
+                          default_cosmology=Param(bool, True, msg='True to use default DSPS cosmology. If False,'
+                                                                  'Om0, w0, wa, h need to be supplied in the '
+                                                                  'sample function'))
 
     inputs = [("model", Hdf5Handle)]
     outputs = [("output", Hdf5Handle)]
@@ -85,7 +87,7 @@ class DSPSPhotometryCreator(Creator):
 
         if not os.path.isfile(self.config.ssp_templates_file):
             default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
-                                                  'dsps_default_data'))
+                                                               'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
             self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
@@ -93,20 +95,33 @@ class DSPSPhotometryCreator(Creator):
         if not os.path.isdir(self.config.filter_folder):
             raise OSError("File {self.config.filter_folder} not found")
 
+        if self.config.min_wavelength < 0:  # pragma: no cover
+            raise ValueError("min_wavelength must be positive, not {self.config.min_wavelength}")
+        if (self.config.max_wavelength < 0) | (
+                self.config.max_wavelength <= self.config.min_wavelength):  # pragma: no cover
+            raise ValueError("max_wavelength must be positive and greater than min_wavelength,"
+                             " not {self.config.max_wavelength}")
+
         self.model = None
+        self.wavelength_range_mask = None
+        self.restframe_wavelength_range = None
         self.wavebands = self.config.wavebands.split(',')
         self.filter_wavelengths = np.array([load_transmission_curve(fn=os.path.join(self.config.filter_folder,
                                                                                     '{}_{}_transmission.h5'
                                                                                     .format(self.config.instrument_name,
                                                                                             waveband))).wave
                                             for waveband in self.wavebands], dtype=object)
+        zmax = 10  # pragma: no cover
+        if (self.filter_wavelengths[0][0] < self.config.min_wavelength * (1 + zmax)) | \
+                (self.filter_wavelengths[-1][-1] > self.config.max_wavelength * (1 + zmax)):  # pragma: no cover
+            raise ValueError("The filter wavelengths should be within the maximally observed-frame SED wavelength.")
 
         self.filter_transmissions = np.array([load_transmission_curve(fn=os.path.join(self.config.filter_folder,
                                                                                       '{}_{}_transmission.h5'
                                                                                       .format(self.config.
                                                                                               instrument_name,
                                                                                               waveband))).transmission
-                                             for waveband in self.wavebands], dtype=object)
+                                              for waveband in self.wavebands], dtype=object)
 
     def sample(self, seed: int = None,
                input_data=os.path.join(default_files_folder, 'model_DSPSPopulationSedModeler.hdf5'),
@@ -188,11 +203,13 @@ class DSPSPhotometryCreator(Creator):
         self._b = [None, 0, 0, 0]
         self._calc_rest_mag_vmap = jjit(vmap(calc_rest_mag, in_axes=self._b))
         restframe_abs_mags = np.zeros((len(rest_frame_seds), len(self.wavebands)))
+        self.wavelength_range_mask = np.where((ssp_data.ssp_wave >= self.config.min_wavelength) &
+                                              (ssp_data.ssp_wave <= self.config.max_wavelength))
+        self.restframe_wavelength_range = ssp_data.ssp_wave[self.wavelength_range_mask]
 
         for j in range(len(self.wavebands)):
-
-            args_abs_mags = (ssp_data.ssp_wave, rest_frame_seds, np.array(list(filter_wavelengths[:, j]),
-                                                                          dtype='float'),
+            args_abs_mags = (self.restframe_wavelength_range, rest_frame_seds, np.array(list(filter_wavelengths[:, j]),
+                             dtype='float'),
                              np.array(list(filter_transmissions[:, j]), dtype='float'))
 
             restframe_abs_mags[:, j] = self._calc_rest_mag_vmap(*args_abs_mags)
@@ -229,11 +246,14 @@ class DSPSPhotometryCreator(Creator):
         self._c = [None, 0, 0, 0, 0, None, None, None, None]
         self._calc_app_mag_vmap = jjit(vmap(calc_obs_mag, in_axes=self._c))
 
+        self.wavelength_range_mask = np.where((ssp_data.ssp_wave >= self.config.min_wavelength) &
+                                              (ssp_data.ssp_wave <= self.config.max_wavelength))
+        self.restframe_wavelength_range = ssp_data.ssp_wave[self.wavelength_range_mask]
+
         apparent_mags = np.zeros((len(rest_frame_seds), len(self.wavebands)))
         for j in range(len(self.wavebands)):
-
-            args_app_mags = (ssp_data.ssp_wave, rest_frame_seds, np.array(list(filter_wavelengths[:, j]),
-                                                                          dtype='float'),
+            args_app_mags = (self.restframe_wavelength_range, rest_frame_seds, np.array(list(filter_wavelengths[:, j]),
+                             dtype='float'),
                              np.array(list(filter_transmissions[:, j]), dtype='float'), redshifts,
                              self.config.Om0, self.config.w0, self.config.wa, self.config.h)
 

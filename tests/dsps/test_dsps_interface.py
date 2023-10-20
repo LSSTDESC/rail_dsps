@@ -110,7 +110,8 @@ def test_DSPSSingleSedModeler_model_creation():
                                                        star_formation_history_key='star_formation_history',
                                                        stellar_metallicity_key='stellar_metallicity',
                                                        stellar_metallicity_scatter_key='stellar_metallicity_scatter',
-                                                       restframe_sed_key='restframe_seds')
+                                                       restframe_sed_key='restframe_seds',
+                                                       min_wavelength=250, max_wavelength=12000)
     h5table = h5py.File(trainFile, 'r')
     single_sed_model.add_data('input', h5table)
     single_sed_model.fit_model()
@@ -148,7 +149,8 @@ def test_DSPSPopulationSedModeler_model_creation():
                                                                     stellar_metallicity_key='stellar_metallicity',
                                                                     stellar_metallicity_scatter_key=
                                                                     'stellar_metallicity_scatter',
-                                                                    restframe_sed_key='restframe_seds')
+                                                                    restframe_sed_key='restframe_seds',
+                                                                    min_wavelength=250, max_wavelength=12000)
 
     h5table = h5py.File(trainFile, 'r')
     DSPS_population_SED_model.add_data('input', h5table)
@@ -186,7 +188,8 @@ def test_DSPSPhotometryCreator_photometry_creation():
                                                        star_formation_history_key='star_formation_history',
                                                        stellar_metallicity_key='stellar_metallicity',
                                                        stellar_metallicity_scatter_key='stellar_metallicity_scatter',
-                                                       restframe_sed_key='restframe_seds')
+                                                       restframe_sed_key='restframe_seds',
+                                                       min_wavelength=250, max_wavelength=12000)
     h5table = h5py.File(trainFile, 'r')
     single_sed_model.add_data('input', h5table)
     single_sed_model.fit_model()
@@ -203,6 +206,7 @@ def test_DSPSPhotometryCreator_photometry_creation():
                                                                                           'filters'),
                                                                instrument_name='lsst',
                                                                wavebands='u,g,r,i,z',
+                                                               min_wavelength=250, max_wavelength=12000,
                                                                ssp_templates_file=
                                                                os.path.join(default_files_folder,
                                                                             'ssp_data_fsps_v3.2_lgmet_age.h5'))

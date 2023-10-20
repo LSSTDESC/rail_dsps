@@ -71,7 +71,9 @@ class DSPSSingleSedModeler(Modeler):
                                                                             'output hdf5 dataset'),
                           default_cosmology=Param(bool, True, msg='True to use default DSPS cosmology. If False,'
                                                                   'Om0, w0, wa, h need to be supplied in the '
-                                                                  'fit_model function'))
+                                                                  'fit_model function'),
+                          min_wavelength=Param(float, 250, msg='Minimum output rest-frame wavelength'),
+                          max_wavelength=Param(float, 12000, msg='Maximum output rest-frame wavelength'))
 
     inputs = [("input", Hdf5Handle)]
     outputs = [("model", Hdf5Handle)]
@@ -90,12 +92,20 @@ class DSPSSingleSedModeler(Modeler):
         """
         RailStage.__init__(self, args, comm=comm)
 
+        self.wavelength_range_mask = None
+        self.restframe_wavelength_range = None
         if not os.path.isfile(self.config.ssp_templates_file):
             default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
                                                   'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
             self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
+
+        if self.config.min_wavelength < 0:  # pragma: no cover
+            raise ValueError("min_wavelength must be positive, not {self.config.min_wavelength}")
+        if (self.config.max_wavelength < 0) | (self.config.max_wavelength <= self.config.min_wavelength):  # pragma: no cover
+            raise ValueError("max_wavelength must be positive and greater than min_wavelength,"
+                             " not {self.config.max_wavelength}")
 
     def _get_rest_frame_seds(self, ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
                              stellar_metallicities, stellar_metallicities_scatter):
@@ -157,7 +167,7 @@ class DSPSSingleSedModeler(Modeler):
             else:
                 raise ValueError
 
-            restframe_seds[i] = restframe_sed.rest_sed
+            restframe_seds[i] = restframe_sed.rest_sed[self.wavelength_range_mask]
 
         if self.comm is not None:  # pragma: no cover
             restframe_seds = self.comm.gather(restframe_seds)
@@ -194,7 +204,7 @@ class DSPSSingleSedModeler(Modeler):
         Returns
         -------
         model: Hdf5Handle
-            Hdf5Handle storing the rest-frame SED model
+            Hdf5 table storing the rest-frame SED model
         """
         if self.config.default_cosmology:
             self.config.Om0 = DEFAULT_COSMOLOGY.Om0
@@ -246,6 +256,9 @@ class DSPSSingleSedModeler(Modeler):
         star_formation_histories = input_galaxy_properties[self.config.star_formation_history_key][()]
         stellar_metallicities = input_galaxy_properties[self.config.stellar_metallicity_key][()]
         stellar_metallicities_scatter = input_galaxy_properties[self.config.stellar_metallicity_scatter_key][()]
+        self.wavelength_range_mask = np.where((ssp_data.ssp_wave >= self.config.min_wavelength) &
+                                              (ssp_data.ssp_wave <= self.config.max_wavelength))
+        self.restframe_wavelength_range = ssp_data.ssp_wave[self.wavelength_range_mask]
 
         restframe_seds = self._get_rest_frame_seds(ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
                                                    stellar_metallicities, stellar_metallicities_scatter)
@@ -303,7 +316,9 @@ class DSPSPopulationSedModeler(Modeler):
                                                                              'output hdf5 dataset'),
                           default_cosmology = Param(bool, True, msg='True to use default DSPS cosmology. If False,'
                                                                     'Om0, w0, wa, h need to be supplied in the '
-                                                                    'fit_model function'))
+                                                                    'fit_model function'),
+                          min_wavelength=Param(float, 250, msg='Minimum output rest-frame wavelength'),
+                          max_wavelength=Param(float, 12000, msg='Maximum output rest-frame wavelength'))
 
     inputs = [("input", Hdf5Handle)]
     outputs = [("model", Hdf5Handle)]
@@ -324,12 +339,20 @@ class DSPSPopulationSedModeler(Modeler):
 
         RailStage.__init__(self, args, comm=comm)
 
+        self.wavelength_range_mask = None
+        self.restframe_wavelength_range = None
         if not os.path.isfile(self.config.ssp_templates_file):
             default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
                                                   'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
                       '--output-dir {}'.format(default_files_folder))
             self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
+
+        if self.config.min_wavelength < 0:  # pragma: no cover
+            raise ValueError("min_wavelength must be positive, not {self.config.min_wavelength}")
+        if (self.config.max_wavelength < 0) | (self.config.max_wavelength <= self.config.min_wavelength):  # pragma: no cover
+            raise ValueError("max_wavelength must be positive and greater than min_wavelength,"
+                             " not {self.config.max_wavelength}")
 
     def _get_rest_frame_seds(self, ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
                              stellar_metallicities, stellar_metallicities_scatter):
@@ -389,7 +412,7 @@ class DSPSPopulationSedModeler(Modeler):
 
         restframe_seds_galpop = self._calc_sed_vmap(*args_pop)
 
-        return restframe_seds_galpop.rest_sed
+        return restframe_seds_galpop.rest_sed[self.wavelength_range_mask]
 
     def fit_model(self, input_data=os.path.join(default_files_folder, 'input_galaxy_properties_dsps.hdf5'),
                   Om0=DEFAULT_COSMOLOGY.Om0, w0=DEFAULT_COSMOLOGY.w0, wa=DEFAULT_COSMOLOGY.wa,
@@ -414,7 +437,7 @@ class DSPSPopulationSedModeler(Modeler):
         Returns
         -------
         model: Hdf5Handle
-            Hdf5Handle storing the rest-frame SED model
+            Hdf5 table storing the rest-frame SED model
         """
         if self.config.default_cosmology:
             self.config.Om0 = DEFAULT_COSMOLOGY.Om0
@@ -465,6 +488,9 @@ class DSPSPopulationSedModeler(Modeler):
         star_formation_histories = input_galaxy_properties[self.config.star_formation_history_key][()]
         stellar_metallicities = input_galaxy_properties[self.config.stellar_metallicity_key][()]
         stellar_metallicities_scatter = input_galaxy_properties[self.config.stellar_metallicity_scatter_key][()]
+        self.wavelength_range_mask = np.where((ssp_data.ssp_wave >= self.config.min_wavelength) &
+                                              (ssp_data.ssp_wave <= self.config.max_wavelength))
+        self.restframe_wavelength_range = ssp_data.ssp_wave[self.wavelength_range_mask]
 
         restframe_seds = self._get_rest_frame_seds(ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
                                                    stellar_metallicities, stellar_metallicities_scatter)
