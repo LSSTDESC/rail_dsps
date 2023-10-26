@@ -1,5 +1,6 @@
 [project]
 name = "pz_rail_dsps"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 readme = "README.md"
 authors = [
@@ -21,7 +22,6 @@ dependencies = [
     "dsps",
 ]
 
-
 # On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
 [project.optional-dependencies]
 dev = [
@@ -41,11 +41,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "src/rail/dsps/_version.py"
-
-[tools.setuptools.packages.find]
-where = ["."]
-include = ["rail"]
-namespaces = true
 
 [tool.pytest.ini_options]
 testpaths = [
