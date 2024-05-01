@@ -20,7 +20,7 @@ from dsps import load_transmission_curve
 from dsps.cosmology import DEFAULT_COSMOLOGY
 
 # RAIL modules
-from rail.core.utils import find_rail_file
+from rail.utils.core_utils import find_rail_file
 from rail.creation.engine import Creator
 from rail.core.stage import RailStage
 from rail.core.data import Hdf5Handle
