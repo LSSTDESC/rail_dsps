@@ -21,7 +21,7 @@ from dsps import calc_rest_sed_sfh_table_met_table
 # RAIL modules
 from rail.creation.engine import Modeler
 from rail.core.stage import RailStage
-from rail.core.utils import find_rail_file
+from rail.utils.path_utils import find_rail_file
 from rail.core.data import Hdf5Handle
 
 

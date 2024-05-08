@@ -16,7 +16,7 @@ import pytest
 
 # RAIL modules
 from rail.core.stage import RailStage
-from rail.core.utils import find_rail_file
+from rail.utils.path_utils import find_rail_file
 from rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
 from rail.creation.engines.dsps_sed_modeler import DSPSPopulationSedModeler, DSPSSingleSedModeler
 
