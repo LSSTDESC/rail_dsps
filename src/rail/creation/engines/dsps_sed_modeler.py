@@ -90,7 +90,7 @@ class DSPSSingleSedModeler(Modeler):
         comm:
 
         """
-        super().__init__(self, args, **kwargs)
+        super().__init__(args, **kwargs)
 
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
@@ -337,7 +337,7 @@ class DSPSPopulationSedModeler(Modeler):
         comm:
         """
 
-        super().__init__(self, args, **kwargs)
+        super().__init__(args, **kwargs)
 
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None

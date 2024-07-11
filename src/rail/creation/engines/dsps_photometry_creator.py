@@ -83,7 +83,7 @@ class DSPSPhotometryCreator(Creator):
         args:
         comm:
         """
-        super().__init__(self, args, **kwargs)
+        super().__init__(args, **kwargs)
 
         if not os.path.isfile(self.config.ssp_templates_file):
             default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
