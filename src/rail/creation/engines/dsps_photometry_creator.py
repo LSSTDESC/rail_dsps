@@ -70,7 +70,7 @@ class DSPSPhotometryCreator(Creator):
     inputs = [("model", Hdf5Handle)]
     outputs = [("output", Hdf5Handle)]
 
-    def __init__(self, args, comm=None):
+    def __init__(self, args, **kwargs):
         """
         Initialize DSPSPhotometryCreator class. If the SSP templates are not provided by the user, they are automatically
         downloaded from the public NERSC directory. These default templates are created with default FSPS values,
@@ -83,7 +83,7 @@ class DSPSPhotometryCreator(Creator):
         args:
         comm:
         """
-        RailStage.__init__(self, args, comm=comm)
+        super().__init__(self, args, **kwargs)
 
         if not os.path.isfile(self.config.ssp_templates_file):
             default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
