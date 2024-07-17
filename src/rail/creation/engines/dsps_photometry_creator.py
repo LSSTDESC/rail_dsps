@@ -10,6 +10,7 @@ from __future__ import (print_function, division, absolute_import,
 # External modules
 import os
 import numpy as np
+import pandas as pd
 from ceci.config import StageParameter as Param
 from jax import vmap
 from jax import jit as jjit
@@ -23,7 +24,7 @@ from dsps.cosmology import DEFAULT_COSMOLOGY
 from rail.utils.path_utils import find_rail_file
 from rail.creation.engine import Creator
 from rail.core.stage import RailStage
-from rail.core.data import Hdf5Handle
+from rail.core.data import Hdf5Handle, PqHandle
 
 
 class DSPSPhotometryCreator(Creator):
@@ -63,12 +64,23 @@ class DSPSPhotometryCreator(Creator):
                           ssp_templates_file=Param(str, os.path.join(default_files_folder,
                                                                      'ssp_data_fsps_v3.2_lgmet_age.h5'),
                                                    msg='hdf5 file storing the SSP libraries used to create SEDs'),
-                          default_cosmology=Param(bool, True, msg='True to use default DSPS cosmology. If False,'
-                                                                  'Om0, w0, wa, h need to be supplied in the '
-                                                                  'sample function'))
+                          Om0=Param(float, DEFAULT_COSMOLOGY.Om0,
+                                    msg='Omega matter: density of non-relativistic matter '
+                                        'in units of the critical density at z=0.'),
+                          w0=Param(float, DEFAULT_COSMOLOGY.w0, msg='Dark energy equation of state at z=0 (a=1). '
+                                                                    'This is pressure/density for dark energy in '
+                                                                    'units where c=1.'),
+                          wa=Param(float, DEFAULT_COSMOLOGY.wa,
+                                   msg='Negative derivative of the dark energy equation of '
+                                       'state with respect to the scale factor. A '
+                                       'cosmological constant has w0=-1.0 and wa=0.0.'),
+                          h=Param(float, DEFAULT_COSMOLOGY.h, msg='dimensionless Hubble constant at z=0.'))#,
+                          #default_cosmology=Param(bool, True, msg='True to use default DSPS cosmology. If False,'
+                          #                                        'Om0, w0, wa, h need to be supplied in the '
+                          #                                        'sample function'))
 
-    inputs = [("model", Hdf5Handle)]
-    outputs = [("output", Hdf5Handle)]
+    inputs = [("input", Hdf5Handle)]
+    outputs = [("output", PqHandle)]
 
     def __init__(self, args, comm=None):
         """
@@ -86,11 +98,9 @@ class DSPSPhotometryCreator(Creator):
         RailStage.__init__(self, args, comm=comm)
 
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
-                                                               'dsps_default_data'))
             os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
-                      '--output-dir {}'.format(default_files_folder))
-            self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
+                      '--output-dir {}'.format(os.getcwd()))
+            self.config.ssp_templates_file = os.path.join(os.getcwd(), 'ssp_data_fsps_v3.2_lgmet_age.h5')
 
         if not os.path.isdir(self.config.filter_folder):
             raise OSError("File {self.config.filter_folder} not found")
@@ -124,9 +134,9 @@ class DSPSPhotometryCreator(Creator):
                                               for waveband in self.wavebands], dtype=object)
 
     def sample(self, seed: int = None,
-               input_data=os.path.join(default_files_folder, 'model_DSPSPopulationSedModeler.hdf5'),
-               Om0=DEFAULT_COSMOLOGY.Om0, w0=DEFAULT_COSMOLOGY.w0, wa=DEFAULT_COSMOLOGY.wa,
-               h=DEFAULT_COSMOLOGY.h, **kwargs):
+               input_data=os.path.join(default_files_folder, 'model_DSPSPopulationSedModeler.hdf5'), **kwargs):
+               #Om0=DEFAULT_COSMOLOGY.Om0, w0=DEFAULT_COSMOLOGY.w0, wa=DEFAULT_COSMOLOGY.wa,
+               #h=DEFAULT_COSMOLOGY.h, **kwargs):
         r"""
         Creates observed and absolute magnitudes for the population of galaxy rest-frame SEDs and stores them into
         an Hdf5Handle.
@@ -158,19 +168,19 @@ class DSPSPhotometryCreator(Creator):
         It then calls the `run` method. Finally, the `Hdf5Handle` associated to the `output` tag is returned.
 
         """
-        if self.config.default_cosmology:
-            self.config.Om0 = DEFAULT_COSMOLOGY.Om0
-            self.config.w0 = DEFAULT_COSMOLOGY.w0
-            self.config.wa = DEFAULT_COSMOLOGY.wa
-            self.config.h = DEFAULT_COSMOLOGY.h
-        else:
-            self.config.Om0 = Om0
-            self.config.w0 = w0
-            self.config.wa = wa
-            self.config.h = h
+        #if self.config.default_cosmology:
+        #    self.config.Om0 = DEFAULT_COSMOLOGY.Om0
+        #    self.config.w0 = DEFAULT_COSMOLOGY.w0
+        #    self.config.wa = DEFAULT_COSMOLOGY.wa
+        #    self.config.h = DEFAULT_COSMOLOGY.h
+        #else:
+        #    self.config.Om0 = Om0
+        #    self.config.w0 = w0
+        #    self.config.wa = wa
+        #    self.config.h = h
         self.config["seed"] = seed
         self.config.update(**kwargs)
-        self.set_data('model', input_data)
+        self.set_data('input', input_data)
         self.run()
         self.finalize()
         output = self.get_handle("output")
@@ -273,7 +283,7 @@ class DSPSPhotometryCreator(Creator):
 
         """
 
-        self.model = self.get_data('model')
+        self.model = self.get_data('input')
 
         redshifts = self.model[self.config.redshift_key][()]
         rest_frame_seds = self.model[self.config.restframe_sed_key][()]
@@ -289,6 +299,10 @@ class DSPSPhotometryCreator(Creator):
                                                           filter_transmissions)
 
         idxs = np.arange(1, len(redshifts) + 1, 1, dtype=int)
-        output_mags = {'id': idxs, self.config.absolute_mags_key: rest_frame_absolute_mags,
-                       self.config.apparent_mags_key: apparent_mags}
-        self.add_data('output', output_mags)
+
+        phot_table = pd.DataFrame({'id': idxs})
+        for i, waveband in enumerate(self.wavebands):
+            phot_table.insert(len(phot_table.columns), 'rest_'+waveband, rest_frame_absolute_mags[:, i])
+            phot_table.insert(len(phot_table.columns), waveband, apparent_mags[:, i])
+
+        self.add_data('output', phot_table)
