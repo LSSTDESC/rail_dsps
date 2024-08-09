@@ -78,7 +78,7 @@ class DSPSSingleSedModeler(Modeler):
     inputs = [("input", Hdf5Handle)]
     outputs = [("model", Hdf5Handle)]
 
-    def __init__(self, args, comm=None):
+    def __init__(self, args, **kwargs):
         """
         Initialize SedModeler class. If the SSP templates are not provided by the user, they are automatically
         downloaded from the public NERSC directory. These default templates are created with default FSPS values,
@@ -90,7 +90,7 @@ class DSPSSingleSedModeler(Modeler):
         comm:
 
         """
-        RailStage.__init__(self, args, comm=comm)
+        super().__init__(args, **kwargs)
 
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
@@ -323,7 +323,7 @@ class DSPSPopulationSedModeler(Modeler):
     inputs = [("input", Hdf5Handle)]
     outputs = [("model", Hdf5Handle)]
 
-    def __init__(self, args, comm=None):
+    def __init__(self, args, **kwargs):
         r"""
         Initialize SedModeler class. If the SSP templates are not provided by the user, they are automatically
         downloaded from the public NERSC directory. These default templates are created with default FSPS values,
@@ -337,7 +337,7 @@ class DSPSPopulationSedModeler(Modeler):
         comm:
         """
 
-        RailStage.__init__(self, args, comm=comm)
+        super().__init__(args, **kwargs)
 
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
