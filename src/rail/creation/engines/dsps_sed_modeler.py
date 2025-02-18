@@ -27,7 +27,7 @@ from rail.core.data import Hdf5Handle
 
 class DSPSSingleSedModeler(Modeler):
     r"""
-    Derived class of Modeler for creating a single galaxy rest-frame SED model using DSPS v3.* (Hearin+21).
+    Derived class of Modeler for creating a single galaxy rest-frame SED model using DSPS v3. (Hearin+21).
     SPS calculations are based on a set of template SEDs of simple stellar populations (SSPs).
     Supplying such templates is outside the planned scope of the DSPS package, and so they
     will need to be retrieved from some other library. For example, the FSPS library supplies
@@ -36,8 +36,6 @@ class DSPSSingleSedModeler(Modeler):
     The input galaxy properties, such as star-formation histories and metallicities, need to be supplied via an
     hdf5 table.
 
-    Notes
-    -----
     The user-provided metallicity grid should be consistently defined with the metallicity of the templates SEDs.
     Users should be cautious in the use of the cosmic time grid. The time resolution strongly depends on the
     user scientific aim.
@@ -88,7 +86,6 @@ class DSPSSingleSedModeler(Modeler):
         ----------
         args:
         comm:
-
         """
         super().__init__(args, **kwargs)
 
@@ -227,13 +224,16 @@ class DSPSSingleSedModeler(Modeler):
         Run method. It Calls `_get_rest_frame_seds` from DSPS to create a galaxy rest-frame SED.
         The load_ssp_templates function loads the SSP templates created with FSPS. The resulting NamedTuple has
         4 entries:
-        ssp_lgmetndarray of shape (n_met, )
-            Array of log10(Z) of the SSP templates where dimensionless Z is the mass fraction of elements heavier than He
-        ssp_lg_age_gyrndarray of shape (n_ages, )
-            Array of log10(age/Gyr) of the SSP templates
-        ssp_wave : ndarray of shape (n_wave, )
-        ssp_fluxndarray of shape (n_met, n_ages, n_wave)
-            SED of the SSP in units of Lsun/Hz/Msun
+
+        .. code-block:: text
+
+            ssp_lgmetndarray of shape (n_met, )
+                Array of log10(Z) of the SSP templates where dimensionless Z is the mass fraction of elements heavier than He
+            ssp_lg_age_gyrndarray of shape (n_ages, )
+                Array of log10(age/Gyr) of the SSP templates
+            ssp_wave : ndarray of shape (n_wave, )
+            ssp_fluxndarray of shape (n_met, n_ages, n_wave)
+                SED of the SSP in units of Lsun/Hz/Msun
 
         Notes
         -----
@@ -243,9 +243,6 @@ class DSPSSingleSedModeler(Modeler):
         (see surviving_mstar.py).
         The units of the resulting rest-frame SED is solar luminosity per Hertz. The luminosity refers to that
         emitted by the formed mass at the time of observation.
-
-        Returns
-        -------
 
         """
         input_galaxy_properties = self.get_data('input')
@@ -271,7 +268,7 @@ class DSPSSingleSedModeler(Modeler):
 
 class DSPSPopulationSedModeler(Modeler):
     r"""
-    Derived class of Modeler for creating a population of galaxy rest-frame SED models using DSPS v3.* (Hearin+21).
+    Derived class of Modeler for creating a population of galaxy rest-frame SED models using DSPS v3. (Hearin+21).
     SPS calculations are based on a set of template SEDs of simple stellar populations (SSPs).
     Supplying such templates is outside the planned scope of the DSPS package, and so they
     will need to be retrieved from some other library. For example, the FSPS library supplies
@@ -280,8 +277,6 @@ class DSPSPopulationSedModeler(Modeler):
     The input galaxy properties, such as star-formation histories and metallicities, need to be supplied via an
     hdf5 table.
 
-    Notes
-    -----
     The user-provided metallicity grid should be consistently defined with the metallicity of the templates SEDs.
     Users should be cautious in the use of the cosmic time grid. The time resolution strongly depends on the
     user scientific aim.
@@ -324,17 +319,13 @@ class DSPSPopulationSedModeler(Modeler):
     outputs = [("model", Hdf5Handle)]
 
     def __init__(self, args, **kwargs):
-        r"""
+        """
         Initialize SedModeler class. If the SSP templates are not provided by the user, they are automatically
         downloaded from the public NERSC directory. These default templates are created with default FSPS values,
         with gas emission at fixed gas solar metallicity value.
         The _a tuple for jax is composed of None or 0, depending on whether you don't or do want the
         array axis to map over for all arguments.
 
-        Parameters
-        ----------
-        args:
-        comm:
         """
 
         super().__init__(args, **kwargs)
@@ -360,14 +351,17 @@ class DSPSPopulationSedModeler(Modeler):
         Computes the rest-frame SED with DSPS based on user-supplied input galaxy population properties.
         The functions calc_rest_sed_sfh_table_lognormal_mdf and calc_rest_sed_sfh_table_met_table
         return a RestSED object composed of
-        rest_sedndarray of shape (n_wave, )
-            Restframe SED of the galaxy in units of Lsun/Hz
-        weightsndarray of shape (n_met, n_ages, 1)
-            SSP weights of the joint distribution of stellar age and metallicity
-        lgmet_weightsndarray of shape (n_met, )
-            SSP weights of the distribution of stellar metallicity
-        age_weightsndarray of shape (n_ages, )
-            SSP weights of the distribution of stellar age
+
+        .. code-block:: text
+
+            rest_sedndarray of shape (n_wave, )
+                Restframe SED of the galaxy in units of Lsun/Hz
+            weightsndarray of shape (n_met, n_ages, 1)
+                SSP weights of the joint distribution of stellar age and metallicity
+            lgmet_weightsndarray of shape (n_met, )
+                SSP weights of the distribution of stellar metallicity
+            age_weightsndarray of shape (n_ages, )
+                SSP weights of the distribution of stellar age
 
         Parameters
         ----------
@@ -461,13 +455,17 @@ class DSPSPopulationSedModeler(Modeler):
         Run method. It Calls `_get_rest_frame_seds` from DSPS to create rest-frame SEDs for a population of galaxies.
         The load_ssp_templates function loads the SSP templates created with FSPS. The resulting NamedTuple has
         4 entries:
-        ssp_lgmetndarray of shape (n_met, )
-            Array of log10(Z) of the SSP templates where dimensionless Z is the mass fraction of elements heavier than He
-        ssp_lg_age_gyrndarray of shape (n_ages, )
-            Array of log10(age/Gyr) of the SSP templates
-        ssp_wave : ndarray of shape (n_wave, )
-        ssp_fluxndarray of shape (n_met, n_ages, n_wave)
-            SED of the SSP in units of Lsun/Hz/Msun
+
+        .. highlight:: python
+        .. code-block:: python
+
+            ssp_lgmetndarray of shape (n_met, )
+                Array of log10(Z) of the SSP templates where dimensionless Z is the mass fraction of elements heavier than He
+            ssp_lg_age_gyrndarray of shape (n_ages, )
+                Array of log10(age/Gyr) of the SSP templates
+            ssp_wave : ndarray of shape (n_wave, )
+            ssp_fluxndarray of shape (n_met, n_ages, n_wave)
+                SED of the SSP in units of Lsun/Hz/Msun
 
         Notes
         -----
@@ -478,8 +476,6 @@ class DSPSPopulationSedModeler(Modeler):
         The units of the resulting rest-frame SED is solar luminosity per Hertz. The luminosity refers to that
         emitted by the formed mass at the time of observation.
 
-        Returns
-        -------
         """
         input_galaxy_properties = self.get_data('input')
         ssp_data = load_ssp_templates(fn=self.config.ssp_templates_file)

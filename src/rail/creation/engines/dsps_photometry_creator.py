@@ -34,8 +34,6 @@ class DSPSPhotometryCreator(Creator):
     containing sequential indices, absolute and apparent magnitudes for each galaxy.
     Photometric quantities are computed for the filters defined in the configuration file.
 
-    Notes
-    -----
     jax serially execute the computations on CPU on single core, for CPU parallelization you need MPI.
     If GPU is used, jax natively and automatically parallelize the execution.
 
