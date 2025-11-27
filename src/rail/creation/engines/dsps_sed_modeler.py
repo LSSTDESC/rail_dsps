@@ -45,6 +45,7 @@ class DSPSSingleSedModeler(Modeler):
     """
 
     name = "DSPSSingleSedModeler"
+    entrypoint_function = "fit_model"  # the user-facing science function for this class
     default_files_folder = find_rail_file(
         os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
     )
@@ -375,6 +376,7 @@ class DSPSPopulationSedModeler(Modeler):
     """
 
     name = "DSPSPopulationSedModeler"
+    entrypoint_function = "fit_model"  # the user-facing science function for this class
     default_files_folder = find_rail_file(
         os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
     )
