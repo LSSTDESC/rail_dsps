@@ -4,23 +4,29 @@
 # Author: Luca Tortorelli
 
 # System imports
-from __future__ import (print_function, division, absolute_import,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # External modules
 import os
 import subprocess
-import numpy as np
+
 import h5py
+import numpy as np
 import pytest
 
 # RAIL modules
 from rail.core.stage import RailStage
 from rail.utils.path_utils import find_rail_file
-from rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
-from rail.creation.engines.dsps_sed_modeler import DSPSPopulationSedModeler, DSPSSingleSedModeler
 
-default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
+from rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
+from rail.creation.engines.dsps_sed_modeler import (
+    DSPSPopulationSedModeler,
+    DSPSSingleSedModeler,
+)
+
+default_files_folder = find_rail_file(
+    os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
+)
 
 
 def create_testdata(files_folder):
@@ -44,21 +50,27 @@ def create_testdata(files_folder):
     gal_sfr_table = np.random.uniform(0, 10, gal_t_table.size)  # SFR in Msun/yr
 
     gal_lgmet = -2.0  # log10(Z)
-    gal_lgmet_scatter = 0.2  # lognormal scatter in the metallicity distribution function
+    gal_lgmet_scatter = (
+        0.2  # lognormal scatter in the metallicity distribution function
+    )
 
     cosmic_time_grid = np.full((n_galaxies, len(gal_t_table)), gal_t_table)
     star_formation_history = np.full((n_galaxies, len(gal_sfr_table)), gal_sfr_table)
     stellar_metallicity = np.full(n_galaxies, gal_lgmet)
     stellar_metallicity_scatter = np.full(n_galaxies, gal_lgmet_scatter)
 
-    test_data_filename = os.path.join(files_folder, 'input_galaxy_properties_dsps.h5')
+    test_data_filename = os.path.join(files_folder, "input_galaxy_properties_dsps.h5")
 
-    with h5py.File(test_data_filename, 'w') as h5table:
-        h5table.create_dataset(name='redshifts', data=redshift)
-        h5table.create_dataset(name='cosmic_time_grid', data=cosmic_time_grid)
-        h5table.create_dataset(name='star_formation_history', data=star_formation_history)
-        h5table.create_dataset(name='stellar_metallicity', data=stellar_metallicity)
-        h5table.create_dataset(name='stellar_metallicity_scatter', data=stellar_metallicity_scatter)
+    with h5py.File(test_data_filename, "w") as h5table:
+        h5table.create_dataset(name="redshifts", data=redshift)
+        h5table.create_dataset(name="cosmic_time_grid", data=cosmic_time_grid)
+        h5table.create_dataset(
+            name="star_formation_history", data=star_formation_history
+        )
+        h5table.create_dataset(name="stellar_metallicity", data=stellar_metallicity)
+        h5table.create_dataset(
+            name="stellar_metallicity_scatter", data=stellar_metallicity_scatter
+        )
 
     return test_data_filename
 
@@ -101,24 +113,27 @@ def test_DSPSSingleSedModeler_model_creation():
     DS = RailStage.data_store
     DS.__class__.allow_overwrite = True
 
-    single_sed_model = DSPSSingleSedModeler.make_stage(name='DSPS_single_SED_model',
-                                                       ssp_templates_file=
-                                                       os.path.join(default_files_folder,
-                                                                    'ssp_data_fsps_v3.2_lgmet_age.h5'),
-                                                       redshift_key='redshifts',
-                                                       cosmic_time_grid_key='cosmic_time_grid',
-                                                       star_formation_history_key='star_formation_history',
-                                                       stellar_metallicity_key='stellar_metallicity',
-                                                       stellar_metallicity_scatter_key='stellar_metallicity_scatter',
-                                                       restframe_sed_key='restframe_seds',
-                                                       min_wavelength=250, max_wavelength=12000)
-    h5table = h5py.File(trainFile, 'r')
-    single_sed_model.add_data('input', h5table)
+    single_sed_model = DSPSSingleSedModeler.make_stage(
+        name="DSPS_single_SED_model",
+        ssp_templates_file=os.path.join(
+            default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+        ),
+        redshift_key="redshifts",
+        cosmic_time_grid_key="cosmic_time_grid",
+        star_formation_history_key="star_formation_history",
+        stellar_metallicity_key="stellar_metallicity",
+        stellar_metallicity_scatter_key="stellar_metallicity_scatter",
+        restframe_sed_key="restframe_seds",
+        min_wavelength=250,
+        max_wavelength=12000,
+    )
+    h5table = h5py.File(trainFile, "r")
+    single_sed_model.add_data("input", h5table)
     single_sed_model.fit_model()
     h5table.close()
 
-    rest_frame_sed_models = single_sed_model.get_data('model')
-    restframe_seds = rest_frame_sed_models['restframe_seds']
+    rest_frame_sed_models = single_sed_model.get_data("model")
+    restframe_seds = rest_frame_sed_models["restframe_seds"]
 
     subprocess.run(["rm", "model_DSPS_single_SED_model.hdf5"])
     subprocess.run(["rm", trainFile])
@@ -139,26 +154,28 @@ def test_DSPSPopulationSedModeler_model_creation():
     DS = RailStage.data_store
     DS.__class__.allow_overwrite = True
 
-    DSPS_population_SED_model = DSPSPopulationSedModeler.make_stage(name='DSPS_population_SED_model',
-                                                                    ssp_templates_file=
-                                                                    os.path.join(default_files_folder,
-                                                                                 'ssp_data_fsps_v3.2_lgmet_age.h5'),
-                                                                    redshift_key='redshifts',
-                                                                    cosmic_time_grid_key='cosmic_time_grid',
-                                                                    star_formation_history_key='star_formation_history',
-                                                                    stellar_metallicity_key='stellar_metallicity',
-                                                                    stellar_metallicity_scatter_key=
-                                                                    'stellar_metallicity_scatter',
-                                                                    restframe_sed_key='restframe_seds',
-                                                                    min_wavelength=250, max_wavelength=12000)
+    DSPS_population_SED_model = DSPSPopulationSedModeler.make_stage(
+        name="DSPS_population_SED_model",
+        ssp_templates_file=os.path.join(
+            default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+        ),
+        redshift_key="redshifts",
+        cosmic_time_grid_key="cosmic_time_grid",
+        star_formation_history_key="star_formation_history",
+        stellar_metallicity_key="stellar_metallicity",
+        stellar_metallicity_scatter_key="stellar_metallicity_scatter",
+        restframe_sed_key="restframe_seds",
+        min_wavelength=250,
+        max_wavelength=12000,
+    )
 
-    h5table = h5py.File(trainFile, 'r')
-    DSPS_population_SED_model.add_data('input', h5table)
+    h5table = h5py.File(trainFile, "r")
+    DSPS_population_SED_model.add_data("input", h5table)
     DSPS_population_SED_model.fit_model()
     h5table.close()
 
-    rest_frame_sed_models = DSPS_population_SED_model.get_data('model')
-    restframe_seds = rest_frame_sed_models['restframe_seds']
+    rest_frame_sed_models = DSPS_population_SED_model.get_data("model")
+    restframe_seds = rest_frame_sed_models["restframe_seds"]
 
     subprocess.run(["rm", "model_DSPS_population_SED_model.hdf5"])
     subprocess.run(["rm", trainFile])
@@ -179,45 +196,50 @@ def test_DSPSPhotometryCreator_photometry_creation():
     DS = RailStage.data_store
     DS.__class__.allow_overwrite = True
 
-    single_sed_model = DSPSSingleSedModeler.make_stage(name='DSPS_single_SED_model',
-                                                       ssp_templates_file=
-                                                       os.path.join(default_files_folder,
-                                                                    'ssp_data_fsps_v3.2_lgmet_age.h5'),
-                                                       redshift_key='redshifts',
-                                                       cosmic_time_grid_key='cosmic_time_grid',
-                                                       star_formation_history_key='star_formation_history',
-                                                       stellar_metallicity_key='stellar_metallicity',
-                                                       stellar_metallicity_scatter_key='stellar_metallicity_scatter',
-                                                       restframe_sed_key='restframe_seds',
-                                                       min_wavelength=250, max_wavelength=12000)
-    h5table = h5py.File(trainFile, 'r')
-    single_sed_model.add_data('input', h5table)
+    single_sed_model = DSPSSingleSedModeler.make_stage(
+        name="DSPS_single_SED_model",
+        ssp_templates_file=os.path.join(
+            default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+        ),
+        redshift_key="redshifts",
+        cosmic_time_grid_key="cosmic_time_grid",
+        star_formation_history_key="star_formation_history",
+        stellar_metallicity_key="stellar_metallicity",
+        stellar_metallicity_scatter_key="stellar_metallicity_scatter",
+        restframe_sed_key="restframe_seds",
+        min_wavelength=250,
+        max_wavelength=12000,
+    )
+    h5table = h5py.File(trainFile, "r")
+    single_sed_model.add_data("input", h5table)
     single_sed_model.fit_model()
     h5table.close()
 
-    trainFile_photometry = 'model_DSPS_single_SED_model.hdf5'
+    trainFile_photometry = "model_DSPS_single_SED_model.hdf5"
 
-    DSPS_photometry_creator = DSPSPhotometryCreator.make_stage(name='DSPS_photometry_creator',
-                                                               redshift_key='redshifts',
-                                                               restframe_sed_key='restframe_seds',
-                                                               absolute_mags_key='rest_frame_absolute_mags',
-                                                               apparent_mags_key='apparent_mags',
-                                                               filter_folder=os.path.join(default_files_folder,
-                                                                                          'filters'),
-                                                               instrument_name='lsst',
-                                                               wavebands='u,g,r,i,z',
-                                                               min_wavelength=250, max_wavelength=12000,
-                                                               ssp_templates_file=
-                                                               os.path.join(default_files_folder,
-                                                                            'ssp_data_fsps_v3.2_lgmet_age.h5'))
+    DSPS_photometry_creator = DSPSPhotometryCreator.make_stage(
+        name="DSPS_photometry_creator",
+        redshift_key="redshifts",
+        restframe_sed_key="restframe_seds",
+        absolute_mags_key="rest_frame_absolute_mags",
+        apparent_mags_key="apparent_mags",
+        filter_folder=os.path.join(default_files_folder, "filters"),
+        instrument_name="lsst",
+        wavebands="u,g,r,i,z",
+        min_wavelength=250,
+        max_wavelength=12000,
+        ssp_templates_file=os.path.join(
+            default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+        ),
+    )
 
-    h5table = h5py.File(trainFile_photometry, 'r')
-    DSPS_photometry_creator.add_data('model', h5table)
+    h5table = h5py.File(trainFile_photometry, "r")
+    DSPS_photometry_creator.add_data("model", h5table)
     output_mags = DSPS_photometry_creator.sample()
     h5table.close()
 
     subprocess.run(["rm", trainFile_photometry])
     subprocess.run(["rm", trainFile])
-    subprocess.run(["rm", 'output_DSPS_photometry_creator.hdf5'])
+    subprocess.run(["rm", "output_DSPS_photometry_creator.hdf5"])
 
-    assert len(output_mags.data['apparent_mags']) != 0
+    assert len(output_mags.data["apparent_mags"]) != 0
