@@ -46,6 +46,7 @@ class DSPSSingleSedModeler(Modeler):
 
     name = "DSPSSingleSedModeler"
     entrypoint_function = "fit_model"  # the user-facing science function for this class
+    interactive_function = "dsps_single_sed_modeler"
     default_files_folder = find_rail_file(
         os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
     )
@@ -253,27 +254,28 @@ class DSPSSingleSedModeler(Modeler):
         w0=DEFAULT_COSMOLOGY.w0,
         wa=DEFAULT_COSMOLOGY.wa,
         h=DEFAULT_COSMOLOGY.h,
-    ):
+        **kwargs,
+    ) -> Hdf5Handle:
         """
         This function generates the rest-frame SEDs and stores them into the Hdf5Handle.
 
         Parameters
         ----------
-        input_data: str
+        input_data : str
             Filepath to the hdf5 table containing galaxy properties.
-        Om0: float
+        Om0 : float
             Omega matter: density of non-relativistic matter in units of the critical density at z=0.
-        w0: float
+        w0 : float
             Dark energy equation of state at z=0 (a=1). This is pressure/density for dark energy in units where c=1.
-        wa: float
+        wa : float
             Negative derivative of the dark energy equation of state with respect to the scale factor.
             A cosmological constant has w0=-1.0 and wa=0.0.
-        h: float
+        h : float
             dimensionless Hubble constant at z=0.
 
         Returns
         -------
-        model: Hdf5Handle
+        Hdf5Handle
             Hdf5 table storing the rest-frame SED model
         """
         if self.config.default_cosmology:
@@ -377,6 +379,7 @@ class DSPSPopulationSedModeler(Modeler):
 
     name = "DSPSPopulationSedModeler"
     entrypoint_function = "fit_model"  # the user-facing science function for this class
+    interactive_function = "dsps_population_sed_modeler"
     default_files_folder = find_rail_file(
         os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
     )
@@ -574,27 +577,28 @@ class DSPSPopulationSedModeler(Modeler):
         w0=DEFAULT_COSMOLOGY.w0,
         wa=DEFAULT_COSMOLOGY.wa,
         h=DEFAULT_COSMOLOGY.h,
-    ):
+        **kwargs,
+    ) -> Hdf5Handle:
         """
         This function generates the rest-frame SEDs and stores them into the Hdf5Handle.
 
         Parameters
         ----------
-        input_data: str
+        input_data : str
             Filepath to the hdf5 table containing galaxy properties.
-        Om0: float
+        Om0 : float
             Omega matter: density of non-relativistic matter in units of the critical density at z=0.
-        w0: float
+        w0 : float
             Dark energy equation of state at z=0 (a=1). This is pressure/density for dark energy in units where c=1.
-        wa: float
+        wa : float
             Negative derivative of the dark energy equation of state with respect to the scale factor.
             A cosmological constant has w0=-1.0 and wa=0.0.
-        h: float
+        h : float
             dimensionless Hubble constant at z=0.
 
         Returns
         -------
-        model: Hdf5Handle
+        Hdf5Handle
             Hdf5 table storing the rest-frame SED model
         """
         if self.config.default_cosmology:

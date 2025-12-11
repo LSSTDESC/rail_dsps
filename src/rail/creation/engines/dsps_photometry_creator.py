@@ -42,6 +42,7 @@ class DSPSPhotometryCreator(Creator):
 
     name = "DSPSPhotometryCreator"
     entrypoint_function = "sample"  # the user-facing science function for this class
+    interactive_function = "dsps_photometry_creator"
     default_files_folder = find_rail_file(
         os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
     )
@@ -197,37 +198,36 @@ class DSPSPhotometryCreator(Creator):
         wa=DEFAULT_COSMOLOGY.wa,
         h=DEFAULT_COSMOLOGY.h,
         **kwargs,
-    ):
+    ) -> Hdf5Handle:
         r"""
         Creates observed and absolute magnitudes for the population of galaxy rest-frame SEDs and stores them into
         an Hdf5Handle.
 
         Parameters
         ----------
-        seed: int
+        seed : int
             The random seed to control sampling
-        input_data: str
+        input_data : str
             Filepath to the hdf5 table containing the galaxy rest-frame SEDs.
-        Om0: float
+        Om0 : float
             Omega matter: density of non-relativistic matter in units of the critical density at z=0.
-        w0: float
+        w0 : float
             Dark energy equation of state at z=0 (a=1). This is pressure/density for dark energy in units where c=1.
-        wa: float
+        wa : float
             Negative derivative of the dark energy equation of state with respect to the scale factor.
             A cosmological constant has w0=-1.0 and wa=0.0.
-        h: float
+        h : float
             dimensionless Hubble constant at z=0.
 
         Returns
         -------
-        output: Hdf5Handle
+        Hdf5Handle
             Hdf5Handle storing the absolute and apparent magnitudes.
 
         Notes
         -----
         This method puts  `seed` into the stage configuration data, which makes them available to other methods.
         It then calls the `run` method. Finally, the `Hdf5Handle` associated to the `output` tag is returned.
-
         """
         if self.config.default_cosmology:
             self.config.Om0 = DEFAULT_COSMOLOGY.Om0
