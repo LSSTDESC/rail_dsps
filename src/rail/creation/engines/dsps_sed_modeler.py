@@ -41,7 +41,6 @@ class DSPSSingleSedModeler(Modeler):
     The user-provided metallicity grid should be consistently defined with the metallicity of the templates SEDs.
     Users should be cautious in the use of the cosmic time grid. The time resolution strongly depends on the
     user scientific aim.
-
     """
 
     name = "DSPSSingleSedModeler"
@@ -122,17 +121,11 @@ class DSPSSingleSedModeler(Modeler):
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = find_rail_file(
-                os.path.join(
-                    "examples_data", "creation_data", "data", "dsps_default_data"
-                )
-            )
             os.system(
                 "curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 "
-                "--output-dir {}".format(default_files_folder)
-            )
-            self.config.ssp_templates_file = os.path.join(
-                default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+                "--output-dir {}".format(
+                    os.path.dirname(self.config.ssp_templates_file)
+                )
             )
 
         if self.config.min_wavelength < 0:  # pragma: no cover
@@ -454,17 +447,11 @@ class DSPSPopulationSedModeler(Modeler):
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = find_rail_file(
-                os.path.join(
-                    "examples_data", "creation_data", "data", "dsps_default_data"
-                )
-            )
             os.system(
                 "curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 "
-                "--output-dir {}".format(default_files_folder)
-            )
-            self.config.ssp_templates_file = os.path.join(
-                default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+                "--output-dir {}".format(
+                    os.path.dirname(self.config.ssp_templates_file)
+                )
             )
 
         if self.config.min_wavelength < 0:  # pragma: no cover

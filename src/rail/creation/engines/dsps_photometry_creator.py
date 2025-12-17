@@ -117,18 +117,14 @@ class DSPSPhotometryCreator(Creator):
         """
         super().__init__(args, **kwargs)
 
+        print(self.config)
+
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = find_rail_file(
-                os.path.join(
-                    "examples_data", "creation_data", "data", "dsps_default_data"
-                )
-            )
             os.system(
                 "curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 "
-                "--output-dir {}".format(default_files_folder)
-            )
-            self.config.ssp_templates_file = os.path.join(
-                default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"
+                "--output-dir {}".format(
+                    os.path.dirname(self.config.ssp_templates_file)
+                )
             )
 
         if not os.path.isdir(self.config.filter_folder):
