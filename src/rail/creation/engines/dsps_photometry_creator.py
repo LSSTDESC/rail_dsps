@@ -189,10 +189,8 @@ class DSPSPhotometryCreator(Creator):
 
     def sample(
         self,
+        input_data: str,
         seed: int = None,
-        input_data=os.path.join(
-            default_files_folder, "model_DSPSPopulationSedModeler.hdf5"
-        ),
         Om0=DEFAULT_COSMOLOGY.Om0,
         w0=DEFAULT_COSMOLOGY.w0,
         wa=DEFAULT_COSMOLOGY.wa,
@@ -205,10 +203,10 @@ class DSPSPhotometryCreator(Creator):
 
         Parameters
         ----------
-        seed : int
-            The random seed to control sampling
         input_data : str
             Filepath to the hdf5 table containing the galaxy rest-frame SEDs.
+        seed : int
+            The random seed to control sampling
         Om0 : float
             Omega matter: density of non-relativistic matter in units of the critical density at z=0.
         w0 : float
