@@ -15,7 +15,6 @@ import numpy as np
 import pytest
 
 # RAIL modules
-from rail.core.stage import RailStage
 from rail.utils.path_utils import find_rail_file
 
 from rail.creation.engines.dsps_photometry_creator import DSPSPhotometryCreator
@@ -110,8 +109,6 @@ def test_DSPSSingleSedModeler_model_creation():
     """
 
     trainFile = create_testdata(default_files_folder)
-    DS = RailStage.data_store
-    DS.__class__.allow_overwrite = True
 
     single_sed_model = DSPSSingleSedModeler.make_stage(
         name="DSPS_single_SED_model",
@@ -150,9 +147,6 @@ def test_DSPSPopulationSedModeler_model_creation():
     """
 
     trainFile = create_testdata(default_files_folder)
-
-    DS = RailStage.data_store
-    DS.__class__.allow_overwrite = True
 
     DSPS_population_SED_model = DSPSPopulationSedModeler.make_stage(
         name="DSPS_population_SED_model",
@@ -193,9 +187,6 @@ def test_DSPSPhotometryCreator_photometry_creation():
 
     trainFile = create_testdata(default_files_folder)
 
-    DS = RailStage.data_store
-    DS.__class__.allow_overwrite = True
-
     single_sed_model = DSPSSingleSedModeler.make_stage(
         name="DSPS_single_SED_model",
         ssp_templates_file=os.path.join(
@@ -235,7 +226,7 @@ def test_DSPSPhotometryCreator_photometry_creation():
 
     h5table = h5py.File(trainFile_photometry, "r")
     DSPS_photometry_creator.add_data("model", h5table)
-    output_mags = DSPS_photometry_creator.sample()
+    output_mags = DSPS_photometry_creator.sample(trainFile)
     h5table.close()
 
     subprocess.run(["rm", trainFile_photometry])
