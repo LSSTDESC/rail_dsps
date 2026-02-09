@@ -185,7 +185,7 @@ class DSPSPhotometryCreator(Creator):
 
     def sample(
         self,
-        input_data: str,
+        model: str,
         seed: int = None,
         Om0=DEFAULT_COSMOLOGY.Om0,
         w0=DEFAULT_COSMOLOGY.w0,
@@ -199,7 +199,7 @@ class DSPSPhotometryCreator(Creator):
 
         Parameters
         ----------
-        input_data : str
+        model : str
             Filepath to the hdf5 table containing the galaxy rest-frame SEDs.
         seed : int
             The random seed to control sampling
@@ -235,7 +235,7 @@ class DSPSPhotometryCreator(Creator):
             self.config.h = h
         self.config["seed"] = seed
         self.config.update(**kwargs)
-        self.set_data("model", input_data)
+        self.set_data("model", model)
         self.run()
         self.finalize()
         output = self.get_handle("output")
