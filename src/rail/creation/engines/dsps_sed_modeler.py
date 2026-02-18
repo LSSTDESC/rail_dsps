@@ -4,25 +4,27 @@
 # Author: Luca Tortorelli
 
 # System imports
-from __future__ import (print_function, division, absolute_import,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # External modules
 import os
+
 import numpy as np
 from ceci.config import StageParameter as Param
-from jax import vmap
+from dsps import (
+    calc_rest_sed_sfh_table_lognormal_mdf,
+    calc_rest_sed_sfh_table_met_table,
+    load_ssp_templates,
+)
+from dsps.cosmology import DEFAULT_COSMOLOGY, age_at_z
 from jax import jit as jjit
-from dsps.cosmology import age_at_z, DEFAULT_COSMOLOGY
-from dsps import load_ssp_templates
-from dsps import calc_rest_sed_sfh_table_lognormal_mdf
-from dsps import calc_rest_sed_sfh_table_met_table
+from jax import vmap
+from rail.core.data import Hdf5Handle
+from rail.core.stage import RailStage
 
 # RAIL modules
 from rail.creation.engine import Modeler
-from rail.core.stage import RailStage
 from rail.utils.path_utils import find_rail_file
-from rail.core.data import Hdf5Handle
 
 
 class DSPSSingleSedModeler(Modeler):
@@ -39,39 +41,66 @@ class DSPSSingleSedModeler(Modeler):
     The user-provided metallicity grid should be consistently defined with the metallicity of the templates SEDs.
     Users should be cautious in the use of the cosmic time grid. The time resolution strongly depends on the
     user scientific aim.
-
     """
 
     name = "DSPSSingleSedModeler"
-    default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
+    entrypoint_function = "fit_model"  # the user-facing science function for this class
+    interactive_function = "dsps_single_sed_modeler"
+    default_files_folder = find_rail_file(
+        os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
+    )
     config_options = RailStage.config_options.copy()
-    config_options.update(ssp_templates_file=Param(str, os.path.join(default_files_folder,
-                                                                     'ssp_data_fsps_v3.2_lgmet_age.h5'),
-                                                   msg='hdf5 file storing the SSP libraries used to create SEDs'),
-                          redshift_key=Param(str, 'redshifts',
-                                             msg='Redshift keyword name of the hdf5 dataset'),
-                          cosmic_time_grid_key=Param(str, 'cosmic_time_grid',
-                                                     msg='Cosmic time grid keyword name of the hdf5 dataset, '
-                                                         'this is the grid of Universe age over which the stellar mass'
-                                                         ' build-up takes place in units of Gyr'),
-                          star_formation_history_key=Param(str, 'star_formation_history',
-                                                           msg='Star-formation history keyword name of the hdf5 '
-                                                               'dataset, this is the star-formation history of the '
-                                                               'galaxy in units of Msun/yr'),
-                          stellar_metallicity_key=Param(str, 'stellar_metallicity',
-                                                        msg='Stellar metallicity keyword name of the hdf5 dataset, '
-                                                            'this is the stellar metallicity in units of log10(Z)'),
-                          stellar_metallicity_scatter_key=Param(str, 'stellar_metallicity_scatter',
-                                                                msg='Stellar metallicity scatter keyword name of the '
-                                                                    'hdf5 dataset, this is lognormal scatter in the'
-                                                                    ' metallicity distribution function'),
-                          restframe_sed_key=Param(str, 'restframe_sed', msg='Rest-frame SED keyword name of the '
-                                                                            'output hdf5 dataset'),
-                          default_cosmology=Param(bool, True, msg='True to use default DSPS cosmology. If False,'
-                                                                  'Om0, w0, wa, h need to be supplied in the '
-                                                                  'fit_model function'),
-                          min_wavelength=Param(float, 250, msg='Minimum output rest-frame wavelength'),
-                          max_wavelength=Param(float, 12000, msg='Maximum output rest-frame wavelength'))
+    config_options.update(
+        ssp_templates_file=Param(
+            str,
+            os.path.join(default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"),
+            msg="hdf5 file storing the SSP libraries used to create SEDs",
+        ),
+        redshift_key=Param(
+            str, "redshifts", msg="Redshift keyword name of the hdf5 dataset"
+        ),
+        cosmic_time_grid_key=Param(
+            str,
+            "cosmic_time_grid",
+            msg="Cosmic time grid keyword name of the hdf5 dataset, "
+            "this is the grid of Universe age over which the stellar mass"
+            " build-up takes place in units of Gyr",
+        ),
+        star_formation_history_key=Param(
+            str,
+            "star_formation_history",
+            msg="Star-formation history keyword name of the hdf5 "
+            "dataset, this is the star-formation history of the "
+            "galaxy in units of Msun/yr",
+        ),
+        stellar_metallicity_key=Param(
+            str,
+            "stellar_metallicity",
+            msg="Stellar metallicity keyword name of the hdf5 dataset, "
+            "this is the stellar metallicity in units of log10(Z)",
+        ),
+        stellar_metallicity_scatter_key=Param(
+            str,
+            "stellar_metallicity_scatter",
+            msg="Stellar metallicity scatter keyword name of the "
+            "hdf5 dataset, this is lognormal scatter in the"
+            " metallicity distribution function",
+        ),
+        restframe_sed_key=Param(
+            str,
+            "restframe_sed",
+            msg="Rest-frame SED keyword name of the " "output hdf5 dataset",
+        ),
+        default_cosmology=Param(
+            bool,
+            True,
+            msg="True to use default DSPS cosmology. If False,"
+            "Om0, w0, wa, h need to be supplied in the "
+            "fit_model function",
+        ),
+        min_wavelength=Param(float, 250, msg="Minimum output rest-frame wavelength"),
+        max_wavelength=Param(float, 12000, msg="Maximum output rest-frame wavelength"),
+    )
 
     inputs = [("input", Hdf5Handle)]
     outputs = [("model", Hdf5Handle)]
@@ -92,20 +121,34 @@ class DSPSSingleSedModeler(Modeler):
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
-                                                  'dsps_default_data'))
-            os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
-                      '--output-dir {}'.format(default_files_folder))
-            self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
+            os.system(
+                "curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 "
+                "--output-dir {}".format(
+                    os.path.dirname(self.config.ssp_templates_file)
+                )
+            )
 
         if self.config.min_wavelength < 0:  # pragma: no cover
-            raise ValueError("min_wavelength must be positive, not {self.config.min_wavelength}")
-        if (self.config.max_wavelength < 0) | (self.config.max_wavelength <= self.config.min_wavelength):  # pragma: no cover
-            raise ValueError("max_wavelength must be positive and greater than min_wavelength,"
-                             " not {self.config.max_wavelength}")
+            raise ValueError(
+                "min_wavelength must be positive, not {self.config.min_wavelength}"
+            )
+        if (self.config.max_wavelength < 0) | (
+            self.config.max_wavelength <= self.config.min_wavelength
+        ):  # pragma: no cover
+            raise ValueError(
+                "max_wavelength must be positive and greater than min_wavelength,"
+                " not {self.config.max_wavelength}"
+            )
 
-    def _get_rest_frame_seds(self, ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
-                             stellar_metallicities, stellar_metallicities_scatter):
+    def _get_rest_frame_seds(
+        self,
+        ssp_data,
+        redshifts,
+        cosmic_time_grids,
+        star_formation_histories,
+        stellar_metallicities,
+        stellar_metallicities_scatter,
+    ):
         """
         Computes the rest-frame SED with DSPS based on user-supplied input galaxy population properties.
         The functions calc_rest_sed_sfh_table_lognormal_mdf and calc_rest_sed_sfh_table_met_table
@@ -144,23 +187,40 @@ class DSPSSingleSedModeler(Modeler):
         restframe_seds = {}
 
         for i in self.split_tasks_by_rank(range(len(redshifts))):
-            t_obs = age_at_z(redshifts[i], self.config.Om0, self.config.w0, self.config.wa, self.config.h)
+            t_obs = age_at_z(
+                redshifts[i],
+                self.config.Om0,
+                self.config.w0,
+                self.config.wa,
+                self.config.h,
+            )
             if t_obs[0] > cosmic_time_grids[i][-1]:
                 t_obs = cosmic_time_grids[i][-1]
             else:
                 t_obs = t_obs[0]
 
             if np.isscalar(stellar_metallicities[i]):
-                restframe_sed = calc_rest_sed_sfh_table_lognormal_mdf(cosmic_time_grids[i], star_formation_histories[i],
-                                                                      stellar_metallicities[i],
-                                                                      stellar_metallicities_scatter[i],
-                                                                      ssp_data.ssp_lgmet, ssp_data.ssp_lg_age_gyr,
-                                                                      ssp_data.ssp_flux, t_obs)
+                restframe_sed = calc_rest_sed_sfh_table_lognormal_mdf(
+                    cosmic_time_grids[i],
+                    star_formation_histories[i],
+                    stellar_metallicities[i],
+                    stellar_metallicities_scatter[i],
+                    ssp_data.ssp_lgmet,
+                    ssp_data.ssp_lg_age_gyr,
+                    ssp_data.ssp_flux,
+                    t_obs,
+                )
             elif len(stellar_metallicities[i]) > 1:
-                restframe_sed = calc_rest_sed_sfh_table_met_table(cosmic_time_grids[i], star_formation_histories[i],
-                                                                  stellar_metallicities[i],
-                                                                  stellar_metallicities_scatter[i], ssp_data.ssp_lgmet,
-                                                                  ssp_data.ssp_lg_age_gyr, ssp_data.ssp_flux, t_obs)
+                restframe_sed = calc_rest_sed_sfh_table_met_table(
+                    cosmic_time_grids[i],
+                    star_formation_histories[i],
+                    stellar_metallicities[i],
+                    stellar_metallicities_scatter[i],
+                    ssp_data.ssp_lgmet,
+                    ssp_data.ssp_lg_age_gyr,
+                    ssp_data.ssp_flux,
+                    t_obs,
+                )
             else:
                 raise ValueError
 
@@ -178,29 +238,37 @@ class DSPSSingleSedModeler(Modeler):
 
         return restframe_seds
 
-    def fit_model(self, input_data=os.path.join(default_files_folder, 'input_galaxy_properties_dsps.hdf5'),
-                  Om0=DEFAULT_COSMOLOGY.Om0, w0=DEFAULT_COSMOLOGY.w0, wa=DEFAULT_COSMOLOGY.wa,
-                  h=DEFAULT_COSMOLOGY.h):
+    def fit_model(
+        self,
+        input_data=os.path.join(
+            default_files_folder, "input_galaxy_properties_dsps.hdf5"
+        ),
+        Om0=DEFAULT_COSMOLOGY.Om0,
+        w0=DEFAULT_COSMOLOGY.w0,
+        wa=DEFAULT_COSMOLOGY.wa,
+        h=DEFAULT_COSMOLOGY.h,
+        **kwargs,
+    ) -> Hdf5Handle:
         """
         This function generates the rest-frame SEDs and stores them into the Hdf5Handle.
 
         Parameters
         ----------
-        input_data: str
+        input_data : str
             Filepath to the hdf5 table containing galaxy properties.
-        Om0: float
+        Om0 : float
             Omega matter: density of non-relativistic matter in units of the critical density at z=0.
-        w0: float
+        w0 : float
             Dark energy equation of state at z=0 (a=1). This is pressure/density for dark energy in units where c=1.
-        wa: float
+        wa : float
             Negative derivative of the dark energy equation of state with respect to the scale factor.
             A cosmological constant has w0=-1.0 and wa=0.0.
-        h: float
+        h : float
             dimensionless Hubble constant at z=0.
 
         Returns
         -------
-        model: Hdf5Handle
+        Hdf5Handle
             Hdf5 table storing the rest-frame SED model
         """
         if self.config.default_cosmology:
@@ -213,7 +281,7 @@ class DSPSSingleSedModeler(Modeler):
             self.config.w0 = w0
             self.config.wa = wa
             self.config.h = h
-        self.set_data('input', input_data)
+        self.set_data("input", input_data)
         self.run()
         self.finalize()
         model = self.get_handle("model")
@@ -245,25 +313,43 @@ class DSPSSingleSedModeler(Modeler):
         emitted by the formed mass at the time of observation.
 
         """
-        input_galaxy_properties = self.get_data('input')
+        input_galaxy_properties = self.get_data("input")
         ssp_data = load_ssp_templates(fn=self.config.ssp_templates_file)
 
         redshifts = input_galaxy_properties[self.config.redshift_key][()]
-        cosmic_time_grids = input_galaxy_properties[self.config.cosmic_time_grid_key][()]
-        star_formation_histories = input_galaxy_properties[self.config.star_formation_history_key][()]
-        stellar_metallicities = input_galaxy_properties[self.config.stellar_metallicity_key][()]
-        stellar_metallicities_scatter = input_galaxy_properties[self.config.stellar_metallicity_scatter_key][()]
-        self.wavelength_range_mask = np.where((ssp_data.ssp_wave >= self.config.min_wavelength) &
-                                              (ssp_data.ssp_wave <= self.config.max_wavelength))
+        cosmic_time_grids = input_galaxy_properties[self.config.cosmic_time_grid_key][
+            ()
+        ]
+        star_formation_histories = input_galaxy_properties[
+            self.config.star_formation_history_key
+        ][()]
+        stellar_metallicities = input_galaxy_properties[
+            self.config.stellar_metallicity_key
+        ][()]
+        stellar_metallicities_scatter = input_galaxy_properties[
+            self.config.stellar_metallicity_scatter_key
+        ][()]
+        self.wavelength_range_mask = np.where(
+            (ssp_data.ssp_wave >= self.config.min_wavelength)
+            & (ssp_data.ssp_wave <= self.config.max_wavelength)
+        )
         self.restframe_wavelength_range = ssp_data.ssp_wave[self.wavelength_range_mask]
 
-        restframe_seds = self._get_rest_frame_seds(ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
-                                                   stellar_metallicities, stellar_metallicities_scatter)
+        restframe_seds = self._get_rest_frame_seds(
+            ssp_data,
+            redshifts,
+            cosmic_time_grids,
+            star_formation_histories,
+            stellar_metallicities,
+            stellar_metallicities_scatter,
+        )
 
         if self.rank == 0:
-            rest_frame_sed_models = {self.config.restframe_sed_key: restframe_seds,
-                                     self.config.redshift_key: redshifts}
-            self.add_data('model', rest_frame_sed_models)
+            rest_frame_sed_models = {
+                self.config.restframe_sed_key: restframe_seds,
+                self.config.redshift_key: redshifts,
+            }
+            self.add_data("model", rest_frame_sed_models)
 
 
 class DSPSPopulationSedModeler(Modeler):
@@ -285,35 +371,63 @@ class DSPSPopulationSedModeler(Modeler):
     """
 
     name = "DSPSPopulationSedModeler"
-    default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data', 'dsps_default_data'))
+    entrypoint_function = "fit_model"  # the user-facing science function for this class
+    interactive_function = "dsps_population_sed_modeler"
+    default_files_folder = find_rail_file(
+        os.path.join("examples_data", "creation_data", "data", "dsps_default_data")
+    )
     config_options = RailStage.config_options.copy()
-    config_options.update(ssp_templates_file=Param(str, os.path.join(default_files_folder,
-                                                                     'ssp_data_fsps_v3.2_lgmet_age.h5'),
-                                                   msg='hdf5 file storing the SSP libraries used to create SEDs'),
-                          redshift_key=Param(str, 'redshift',
-                                             msg='Redshift keyword name of the hdf5 dataset'),
-                          cosmic_time_grid_key=Param(str, 'cosmic_time_grid',
-                                                     msg='Cosmic time grid keyword name of the hdf5 dataset, '
-                                                         'this is the grid of Universe age over which the stellar mass'
-                                                         ' build-up takes place in units of Gyr'),
-                          star_formation_history_key=Param(str, 'star_formation_history',
-                                                           msg='Star-formation history keyword name of the hdf5 '
-                                                               'dataset, this is the star-formation history of the'
-                                                               ' galaxy in units of Msun/yr'),
-                          stellar_metallicity_key=Param(str, 'stellar_metallicity',
-                                                        msg='Stellar metallicity keyword name of the hdf5 dataset, '
-                                                            'this is the stellar metallicity in units of log10(Z)'),
-                          stellar_metallicity_scatter_key=Param(str, 'stellar_metallicity_scatter',
-                                                                msg='Stellar metallicity scatter keyword name of the '
-                                                                    'hdf5 dataset, this is lognormal scatter in the '
-                                                                    'metallicity distribution function'),
-                          restframe_sed_key=Param(str, 'restframe_seds', msg='Rest-frame SED keyword name of the '
-                                                                             'output hdf5 dataset'),
-                          default_cosmology = Param(bool, True, msg='True to use default DSPS cosmology. If False,'
-                                                                    'Om0, w0, wa, h need to be supplied in the '
-                                                                    'fit_model function'),
-                          min_wavelength=Param(float, 250, msg='Minimum output rest-frame wavelength'),
-                          max_wavelength=Param(float, 12000, msg='Maximum output rest-frame wavelength'))
+    config_options.update(
+        ssp_templates_file=Param(
+            str,
+            os.path.join(default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"),
+            msg="hdf5 file storing the SSP libraries used to create SEDs",
+        ),
+        redshift_key=Param(
+            str, "redshift", msg="Redshift keyword name of the hdf5 dataset"
+        ),
+        cosmic_time_grid_key=Param(
+            str,
+            "cosmic_time_grid",
+            msg="Cosmic time grid keyword name of the hdf5 dataset, "
+            "this is the grid of Universe age over which the stellar mass"
+            " build-up takes place in units of Gyr",
+        ),
+        star_formation_history_key=Param(
+            str,
+            "star_formation_history",
+            msg="Star-formation history keyword name of the hdf5 "
+            "dataset, this is the star-formation history of the"
+            " galaxy in units of Msun/yr",
+        ),
+        stellar_metallicity_key=Param(
+            str,
+            "stellar_metallicity",
+            msg="Stellar metallicity keyword name of the hdf5 dataset, "
+            "this is the stellar metallicity in units of log10(Z)",
+        ),
+        stellar_metallicity_scatter_key=Param(
+            str,
+            "stellar_metallicity_scatter",
+            msg="Stellar metallicity scatter keyword name of the "
+            "hdf5 dataset, this is lognormal scatter in the "
+            "metallicity distribution function",
+        ),
+        restframe_sed_key=Param(
+            str,
+            "restframe_seds",
+            msg="Rest-frame SED keyword name of the " "output hdf5 dataset",
+        ),
+        default_cosmology=Param(
+            bool,
+            True,
+            msg="True to use default DSPS cosmology. If False,"
+            "Om0, w0, wa, h need to be supplied in the "
+            "fit_model function",
+        ),
+        min_wavelength=Param(float, 250, msg="Minimum output rest-frame wavelength"),
+        max_wavelength=Param(float, 12000, msg="Maximum output rest-frame wavelength"),
+    )
 
     inputs = [("input", Hdf5Handle)]
     outputs = [("model", Hdf5Handle)]
@@ -333,20 +447,34 @@ class DSPSPopulationSedModeler(Modeler):
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
         if not os.path.isfile(self.config.ssp_templates_file):
-            default_files_folder = find_rail_file(os.path.join('examples_data', 'creation_data', 'data',
-                                                  'dsps_default_data'))
-            os.system('curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 '
-                      '--output-dir {}'.format(default_files_folder))
-            self.config.ssp_templates_file = os.path.join(default_files_folder, 'ssp_data_fsps_v3.2_lgmet_age.h5')
+            os.system(
+                "curl -O https://portal.nersc.gov/cfs/lsst/schmidt9/ssp_data_fsps_v3.2_lgmet_age.h5 "
+                "--output-dir {}".format(
+                    os.path.dirname(self.config.ssp_templates_file)
+                )
+            )
 
         if self.config.min_wavelength < 0:  # pragma: no cover
-            raise ValueError("min_wavelength must be positive, not {self.config.min_wavelength}")
-        if (self.config.max_wavelength < 0) | (self.config.max_wavelength <= self.config.min_wavelength):  # pragma: no cover
-            raise ValueError("max_wavelength must be positive and greater than min_wavelength,"
-                             " not {self.config.max_wavelength}")
+            raise ValueError(
+                "min_wavelength must be positive, not {self.config.min_wavelength}"
+            )
+        if (self.config.max_wavelength < 0) | (
+            self.config.max_wavelength <= self.config.min_wavelength
+        ):  # pragma: no cover
+            raise ValueError(
+                "max_wavelength must be positive and greater than min_wavelength,"
+                " not {self.config.max_wavelength}"
+            )
 
-    def _get_rest_frame_seds(self, ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
-                             stellar_metallicities, stellar_metallicities_scatter):
+    def _get_rest_frame_seds(
+        self,
+        ssp_data,
+        redshifts,
+        cosmic_time_grids,
+        star_formation_histories,
+        stellar_metallicities,
+        stellar_metallicities_scatter,
+    ):
         """
         Computes the rest-frame SED with DSPS based on user-supplied input galaxy population properties.
         The functions calc_rest_sed_sfh_table_lognormal_mdf and calc_rest_sed_sfh_table_met_table
@@ -389,49 +517,75 @@ class DSPSPopulationSedModeler(Modeler):
         self._a = (0, 0, 0, 0, None, None, None, 0)
 
         if np.isscalar(stellar_metallicities[0]):
-            self._calc_sed_vmap = jjit(vmap(calc_rest_sed_sfh_table_lognormal_mdf, in_axes=self._a))
+            self._calc_sed_vmap = jjit(
+                vmap(calc_rest_sed_sfh_table_lognormal_mdf, in_axes=self._a)
+            )
         elif len(stellar_metallicities[0]) > 1:
-            self._calc_sed_vmap = jjit(vmap(calc_rest_sed_sfh_table_met_table, in_axes=self._a))
+            self._calc_sed_vmap = jjit(
+                vmap(calc_rest_sed_sfh_table_met_table, in_axes=self._a)
+            )
         else:
             raise ValueError
 
         self._b = (0, None, None, None, None)
         self._calc_age_at_z_vmap = jjit(vmap(age_at_z, in_axes=self._b))
-        args_pop_z = (redshifts, self.config.Om0, self.config.w0, self.config.wa, self.config.h)
+        args_pop_z = (
+            redshifts,
+            self.config.Om0,
+            self.config.w0,
+            self.config.wa,
+            self.config.h,
+        )
         t_obs = self._calc_age_at_z_vmap(*args_pop_z)[:, 0]
 
-        args_pop = (cosmic_time_grids, star_formation_histories, stellar_metallicities,
-                    stellar_metallicities_scatter, ssp_data.ssp_lgmet, ssp_data.ssp_lg_age_gyr, ssp_data.ssp_flux,
-                    t_obs)
+        args_pop = (
+            cosmic_time_grids,
+            star_formation_histories,
+            stellar_metallicities,
+            stellar_metallicities_scatter,
+            ssp_data.ssp_lgmet,
+            ssp_data.ssp_lg_age_gyr,
+            ssp_data.ssp_flux,
+            t_obs,
+        )
 
         restframe_seds_galpop = self._calc_sed_vmap(*args_pop)
 
-        return restframe_seds_galpop.rest_sed[:, self.wavelength_range_mask]\
-            .reshape((len(restframe_seds_galpop.rest_sed), len(self.restframe_wavelength_range)))
+        return restframe_seds_galpop.rest_sed[:, self.wavelength_range_mask].reshape(
+            (len(restframe_seds_galpop.rest_sed), len(self.restframe_wavelength_range))
+        )
 
-    def fit_model(self, input_data=os.path.join(default_files_folder, 'input_galaxy_properties_dsps.hdf5'),
-                  Om0=DEFAULT_COSMOLOGY.Om0, w0=DEFAULT_COSMOLOGY.w0, wa=DEFAULT_COSMOLOGY.wa,
-                  h=DEFAULT_COSMOLOGY.h):
+    def fit_model(
+        self,
+        input_data=os.path.join(
+            default_files_folder, "input_galaxy_properties_dsps.hdf5"
+        ),
+        Om0=DEFAULT_COSMOLOGY.Om0,
+        w0=DEFAULT_COSMOLOGY.w0,
+        wa=DEFAULT_COSMOLOGY.wa,
+        h=DEFAULT_COSMOLOGY.h,
+        **kwargs,
+    ) -> Hdf5Handle:
         """
         This function generates the rest-frame SEDs and stores them into the Hdf5Handle.
 
         Parameters
         ----------
-        input_data: str
+        input_data : str
             Filepath to the hdf5 table containing galaxy properties.
-        Om0: float
+        Om0 : float
             Omega matter: density of non-relativistic matter in units of the critical density at z=0.
-        w0: float
+        w0 : float
             Dark energy equation of state at z=0 (a=1). This is pressure/density for dark energy in units where c=1.
-        wa: float
+        wa : float
             Negative derivative of the dark energy equation of state with respect to the scale factor.
             A cosmological constant has w0=-1.0 and wa=0.0.
-        h: float
+        h : float
             dimensionless Hubble constant at z=0.
 
         Returns
         -------
-        model: Hdf5Handle
+        Hdf5Handle
             Hdf5 table storing the rest-frame SED model
         """
         if self.config.default_cosmology:
@@ -444,7 +598,7 @@ class DSPSPopulationSedModeler(Modeler):
             self.config.w0 = w0
             self.config.wa = wa
             self.config.h = h
-        self.set_data('input', input_data)
+        self.set_data("input", input_data)
         self.run()
         self.finalize()
         model = self.get_handle("model")
@@ -477,21 +631,39 @@ class DSPSPopulationSedModeler(Modeler):
         emitted by the formed mass at the time of observation.
 
         """
-        input_galaxy_properties = self.get_data('input')
+        input_galaxy_properties = self.get_data("input")
         ssp_data = load_ssp_templates(fn=self.config.ssp_templates_file)
 
         redshifts = input_galaxy_properties[self.config.redshift_key][()]
-        cosmic_time_grids = input_galaxy_properties[self.config.cosmic_time_grid_key][()]
-        star_formation_histories = input_galaxy_properties[self.config.star_formation_history_key][()]
-        stellar_metallicities = input_galaxy_properties[self.config.stellar_metallicity_key][()]
-        stellar_metallicities_scatter = input_galaxy_properties[self.config.stellar_metallicity_scatter_key][()]
-        self.wavelength_range_mask = np.where((ssp_data.ssp_wave >= self.config.min_wavelength) &
-                                              (ssp_data.ssp_wave <= self.config.max_wavelength))
+        cosmic_time_grids = input_galaxy_properties[self.config.cosmic_time_grid_key][
+            ()
+        ]
+        star_formation_histories = input_galaxy_properties[
+            self.config.star_formation_history_key
+        ][()]
+        stellar_metallicities = input_galaxy_properties[
+            self.config.stellar_metallicity_key
+        ][()]
+        stellar_metallicities_scatter = input_galaxy_properties[
+            self.config.stellar_metallicity_scatter_key
+        ][()]
+        self.wavelength_range_mask = np.where(
+            (ssp_data.ssp_wave >= self.config.min_wavelength)
+            & (ssp_data.ssp_wave <= self.config.max_wavelength)
+        )
         self.restframe_wavelength_range = ssp_data.ssp_wave[self.wavelength_range_mask]
 
-        restframe_seds = self._get_rest_frame_seds(ssp_data, redshifts, cosmic_time_grids, star_formation_histories,
-                                                   stellar_metallicities, stellar_metallicities_scatter)
+        restframe_seds = self._get_rest_frame_seds(
+            ssp_data,
+            redshifts,
+            cosmic_time_grids,
+            star_formation_histories,
+            stellar_metallicities,
+            stellar_metallicities_scatter,
+        )
 
-        rest_frame_sed_models = {self.config.restframe_sed_key: restframe_seds,
-                                 self.config.redshift_key: redshifts}
-        self.add_data('model', rest_frame_sed_models)
+        rest_frame_sed_models = {
+            self.config.restframe_sed_key: restframe_seds,
+            self.config.redshift_key: redshifts,
+        }
+        self.add_data("model", rest_frame_sed_models)

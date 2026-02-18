@@ -1,10 +1,10 @@
 [project]
 name = "pz_rail_dsps"
 requires-python = ">=3.9"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 readme = "README.md"
 authors = [
-    { name = "Luca Tortorelli, LSST DESC PZ WG", email = "Luca.Tortorelli@physik.lmu.de" }
+    { name = "Luca Tortorelli, LSST DESC PZ WG", email = "Luca.Tortorelli@physik.lmu.de" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -15,26 +15,21 @@ classifiers = [
     "Programming Language :: Python",
 ]
 dynamic = ["version"]
-dependencies = [
-    "deprecated",
-    "pz-rail-base>=1.0.3",
-    "jaxlib",
-    "dsps",
-]
+dependencies = ["deprecated", "pz-rail-base>=2.0.0-dev", "jaxlib", "dsps"]
 
 # On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
 [project.optional-dependencies]
 dev = [
-    "qp-prob[full]", 
+    "qp-prob[full]",
     "pytest",
-    "pytest-cov", # Used to report total code coverage
-    "pre-commit", # Used to run checks before finalizing a git commit
-    "pylint", # Used for static linting of files
+    "pytest-cov",    # Used to report total code coverage
+    "pre-commit",    # Used to run checks before finalizing a git commit
+    "pylint",        # Used for static linting of files
 ]
 
 [build-system]
 requires = [
-    "setuptools>=62", # Used to build and package the Python project
+    "setuptools>=62",      # Used to build and package the Python project
     "setuptools_scm>=6.2", # Gets release version from git. Makes it available programmatically
 ]
 build-backend = "setuptools.build_meta"
@@ -43,13 +38,8 @@ build-backend = "setuptools.build_meta"
 write_to = "src/rail/dsps/_version.py"
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
-addopts = [
-    "--cov=rail",
-    "--cov-report=html"
-]
+testpaths = ["tests"]
+addopts = ["--cov=rail", "--cov-report=html"]
 
 [tool.pylint]
 disable = [
