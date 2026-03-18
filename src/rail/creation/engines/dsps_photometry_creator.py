@@ -25,6 +25,7 @@ from rail.core.stage import RailStage
 from rail.creation.engine import Creator
 
 # RAIL modules
+from rail.core.common_params import SHARED_PARAMS
 from rail.utils.path_utils import find_rail_file
 
 
@@ -48,12 +49,7 @@ class DSPSPhotometryCreator(Creator):
     )
     config_options = RailStage.config_options.copy()
     config_options.update(
-        redshift_key=Param(
-            str,
-            "redshifts",
-            msg="Redshift keyword name of the hdf5 dataset "
-            "containing rest-frame SEDs",
-        ),
+        redshift_key=SHARED_PARAMS,
         restframe_sed_key=Param(
             str,
             "restframe_seds",
@@ -78,13 +74,9 @@ class DSPSPhotometryCreator(Creator):
         instrument_name=Param(
             str, "lsst", msg="Instrument name as prefix to filter transmission" " files"
         ),
-        wavebands=Param(str, "u,g,r,i,z,y", msg="Comma-separated list of wavebands"),
-        min_wavelength=Param(
-            float, 250, msg="Minimum input rest-frame wavelength SEDs"
-        ),
-        max_wavelength=Param(
-            float, 12000, msg="Maximum input rest-frame wavelength SEDs"
-        ),
+        wavebands=Param(list, ['u','g','r','i','z','y'], msg="List of wavebands"),
+        min_wavelength=SHARED_PARAMS,
+        max_wavelength=SHARED_PARAMS,
         ssp_templates_file=Param(
             str,
             os.path.join(default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"),
@@ -145,7 +137,7 @@ class DSPSPhotometryCreator(Creator):
         self.model = None
         self.wavelength_range_mask = None
         self.restframe_wavelength_range = None
-        self.wavebands = self.config.wavebands.split(",")
+        self.wavebands = self.config.wavebands.copy()
         self.filter_wavelengths = np.array(
             [
                 load_transmission_curve(

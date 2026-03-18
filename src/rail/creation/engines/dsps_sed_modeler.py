@@ -24,6 +24,7 @@ from rail.core.stage import RailStage
 
 # RAIL modules
 from rail.creation.engine import Modeler
+from rail.core.common_params import SHARED_PARAMS
 from rail.utils.path_utils import find_rail_file
 
 
@@ -56,9 +57,7 @@ class DSPSSingleSedModeler(Modeler):
             os.path.join(default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"),
             msg="hdf5 file storing the SSP libraries used to create SEDs",
         ),
-        redshift_key=Param(
-            str, "redshifts", msg="Redshift keyword name of the hdf5 dataset"
-        ),
+        redshift_key=SHARED_PARAMS,
         cosmic_time_grid_key=Param(
             str,
             "cosmic_time_grid",
@@ -98,8 +97,8 @@ class DSPSSingleSedModeler(Modeler):
             "Om0, w0, wa, h need to be supplied in the "
             "fit_model function",
         ),
-        min_wavelength=Param(float, 250, msg="Minimum output rest-frame wavelength"),
-        max_wavelength=Param(float, 12000, msg="Maximum output rest-frame wavelength"),
+        min_wavelength=SHARED_PARAMS,
+        max_wavelength=SHARED_PARAMS,
     )
 
     inputs = [("input", Hdf5Handle)]
@@ -383,9 +382,7 @@ class DSPSPopulationSedModeler(Modeler):
             os.path.join(default_files_folder, "ssp_data_fsps_v3.2_lgmet_age.h5"),
             msg="hdf5 file storing the SSP libraries used to create SEDs",
         ),
-        redshift_key=Param(
-            str, "redshift", msg="Redshift keyword name of the hdf5 dataset"
-        ),
+        redshift_key=SHARED_PARAMS,
         cosmic_time_grid_key=Param(
             str,
             "cosmic_time_grid",
@@ -425,8 +422,8 @@ class DSPSPopulationSedModeler(Modeler):
             "Om0, w0, wa, h need to be supplied in the "
             "fit_model function",
         ),
-        min_wavelength=Param(float, 250, msg="Minimum output rest-frame wavelength"),
-        max_wavelength=Param(float, 12000, msg="Maximum output rest-frame wavelength"),
+        min_wavelength=SHARED_PARAMS,
+        max_wavelength=SHARED_PARAMS,
     )
 
     inputs = [("input", Hdf5Handle)]
