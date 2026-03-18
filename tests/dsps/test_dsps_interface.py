@@ -216,7 +216,7 @@ def test_DSPSPhotometryCreator_photometry_creation():
         apparent_mags_key="apparent_mags",
         filter_folder=os.path.join(default_files_folder, "filters"),
         instrument_name="lsst",
-        wavebands="u,g,r,i,z",
+        wavebands=['u','g','r','i','z'],
         min_wavelength=250,
         max_wavelength=12000,
         ssp_templates_file=os.path.join(
